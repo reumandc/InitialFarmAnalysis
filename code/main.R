@@ -10,5 +10,9 @@
 #and the save in an R format
 source("ImportData.R")
 
-#Initial comparisons of cropping rotations and resulting yields
+#Initial comparisons of cropping rotations and resulting yields. This was an initial, not wholly 
+#statistically appropriate analysis, now superceded by subsequent analysis. But still some of the
+#data produces stored by this code are needed in subsequent analyses. 
+source("ExploreCroppingRotations.R")
 
+#

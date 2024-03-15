@@ -1,0 +1,202 @@
+\documentclass[letterpaper,11pt]{article}
+%\documentclass[letterpaper,12pt]{article}
+
+%packages
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage[left=1in,top=1in,right=1in,bottom=1in,head=.5cm,foot=.5cm]{geometry}
+\usepackage{url}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{subfig}
+\usepackage{float}
+\usepackage{setspace}
+\usepackage{lineno}
+\usepackage{natbib}
+\usepackage{amsmath}
+\usepackage{xr}
+\usepackage{authblk}
+\usepackage{lineno}
+\usepackage{times}
+
+%Found this online. Makes figures on pages by themselves appear at the top instead of 
+%vertically centered
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+
+%new commands and so on
+\providecommand{\keywords}[1]
+{
+  \small	
+  \textbf{\textit{Keywords---}} #1
+}
+\newcommand{\mean}{\text{mean}}
+\newcommand{\var}{\text{var}}
+\newcommand{\cov}{\text{cov}}
+\newcommand{\cor}{\text{cor}}
+\newcommand{\Rp}{\text{Re}}
+\let\conj\overline
+
+%external documents
+\externaldocument[SI-]{SupMat01}
+
+%Get line numbers to work, also in figure captions
+\linenumbers
+\DeclareCaptionFont{linenumbers}{\internallinenumbers}
+\captionsetup[figure]{font+=linenumbers} % use \internallinenumbers inside figure caption
+
+%\doublespacing
+
+%header material for paper
+\title{Initial analysis of Kastens and Volgamore yield data, 2013-2020}
+\date{}
+
+%authors
+\author[a,b,*]{Daniel C. Reuman}
+
+\affil[a]{Department of Ecology and Evolutionary Biology, University of Kansas}
+\affil[b]{Center for Ecological Research/Kansas Biological Survey, University of Kansas}
+\affil[*]{reuman@ku.edu}
+
+\usepackage{Sweave}
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+%The following is where you load in the numeric results that will be embedded in the text
+<<eval=T,echo=F,message=F,warning=F>>=
+
+resloc<-"../results/DoModelsCorn1/"
+
+#place R code here for loading in necessary variables from Results, Theory
+ANOVA_FC<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineCornAndFallow_anova.Rds"))
+Rsq_FC<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineCornAndFallow_Rsq.Rds"))
+AIC_FC<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineCornAndFallow_AIC.Rds"))
+
+ANOVA_FW<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineWheatAndFallow_anova.Rds"))
+Rsq_FW<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineWheatAndFallow_Rsq.Rds"))
+AIC_FW<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineWheatAndFallow_AIC.Rds"))
+
+ANOVA_FM<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineMiloAndFallow_anova.Rds"))
+Rsq_FM<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineMiloAndFallow_Rsq.Rds"))
+AIC_FM<-readRDS(file=paste0(resloc,"ModelCompare_meLots2_CombineMiloAndFallow_AIC.Rds"))
+@
+
+
+\maketitle
+
+\begin{abstract}
+\noindent Terry Kastens provided me with yield data from the Kastens and Volgamore farms in western Kansas in an email of February 20, 2024. 
+This is a description of the results of an initial analysis of those data, and a summary of some ideas of where 
+we could go next if Terry is interested. 
+\end{abstract}
+
+\section{Introduction}
+
+I started with a period of data exploration and consistency checks. It turned out the data were already pretty clean and clear, but the time was well spent since it helped
+me realize the relationship between ``Field ID'' and ``Field'' and some other aspects of the data and
+also get to know some of the models Terry already ran as described in the spreadsheets he sent.
+
+As an exercise, I then starting pursuing the question framed in Terry's email as to whether corn yields
+were better in field-year pairs for which the prior-year field use was "Fallow" as opposed to "Corn". I also compared
+to other previous-year field uses. I know Terry already answered that question for himself, but it made
+sense to me to start in the same place as an exercise to get going. Those results are in 
+section \ref{sect:CornFallow} of this document.
+
+Along the way I gained some other insights, e.g., pertaining to the relative corn yields of the Kastens (K) and 
+Volgamore (V) farms. These results are in the brief section \ref{sect:VvsK} below. 
+
+I also did some analyses on the effects of planting two years before the year of a corn crop, and the effects
+of precipitation in prior years as well. And I did some analysis incorporating a random effect for field,
+to move toward the possibility of rating fields for the productivity to possibly inform land acquisitions and sales,
+and for other possible uses. These results are in section
+\ref{sect:RecentHistory} and \ref{sect:RandomFieldEffects}, respectively. 
+
+All results are preliminary in the sense that they are intended primarily as a launching pad from which
+Terry and Jude and I might discuss next steps and possible business opportunities. More useful refined and additional 
+analyses could come following feedback and collaboration. Essentially all the analyses I've done of ecological
+data have been a collaboration between myself (the theorist/quantitative expert) and another scientist who is an
+expert on the data and field systems I'm analyzing. I reckon this should be no different. I am sure Terry and Jude
+could tell me which of these analyses are most promising and what directions I should go in or changes I should make
+to what I've already done.
+
+All code for these analyses can be seen at https://github.com/reumandc/InitialFarmAnalysis/tree/master/code.
+I can give you a guide to the structure of that code if you want, and/or write a README file. I have not done
+that yet since it seems more appropriate to get feedback first on my result so far.
+
+Thoughts and alternative proposals on where we might go from here are in section \ref{sect:WhereNext}.
+
+\section{Corn versus fallow}\label{sect:CornFallow}
+
+I used the provided data to create a data frame for which each row was a field-year pair for which corn 
+had been grown. The columns contained all the available information on things like pre-season rainfall,
+in-season rainfal, previous-year field use, growing degree days measures, etc (everything which was provided).
+I combined the V and K data into one single data frame and added a column `VorK' specifying which farm.
+
+After a period of exploring a variety simple linear models to get a sense of the data, I started with the model
+YieldNum $\sim$ Preplant + PreplantSq + In.season + VorK + C.GDD.1 + C.GDD.0.5 + Prev.crop + PercentGte0p5 + Longitude + PlantDay + (1|Year),
+where all the terms are fixed effects except the last term, (1|Year), which represents a random effect for year
+(beyond the effects of weather already encoded in the other terms). `YieldNum' is corn yield in bushels per acre. 
+`Preplant' is precipitation prior to planting. `In.season' is in-season precipitation. 
+The rest of the variables should probably be clear to Jude and Terry. Following standard R notation for linear models,
+the $+$ symbols indicate direct effects with no interaction effects considered. This model was similar to or the same as 
+some of the models described in Terry's spreadsheet. An initial residual analysis (SI Fig. \ref{SI-SIFig:ResdAnal1}) 
+did not find that assumptions of the linear modelling framework were violated, so we can proceed. 
+We henceforth call this model the ``top model''. It had an $R^2$ of $\Sexpr{round(Rsq_FC[2],4)}$ 
+(table \ref{tab:FCresults}, first row), including
+the random effects for year, which is pretty good for now.
+
+To answer the question of whether fallow in the previous year was better for corn yield than was corn in the previous 
+year, I compared this model to another, similar model for which the two levels for the Prev.crop factor corresponding
+to corn and fallow were combined. We call this the FC model (stands for fallow and corn, since these were the levels 
+of the Prev.crop factor which were combined for this model). Comparing it to the top model provides an 
+appropriate statistical test of the hypothesis that corn yield when Prev.crop was fallow is the same as when
+Prev.crop was corn. The ANOVA results (table \ref{tab:FCresults}, row 2) shows the FC model was significantly
+worse than the top model, indicating the IS a significant different in corn yields depending on whether Prev.crop
+was fallow or corn. NOTE: This is in spite of the fact that there were only $10$ rows in the data frame with 
+Prev.crop=fallow, i.e., there were only 10 field-year pairs in the provided data for which corn was grown on a 
+field which was fallow the previous year. Statistical power would be greater if there were more such cases, 
+a fact we will return to below.
+
+Was the significant difference between the top model and the FC model actually meaningful, though? 
+Sometimes when data are abundant a significant results can be paired with a very small effect size, so we
+examine how much greater were corn yields when Prev.crop was fallow compared to when it Prev.crop was corn?
+
+
+\begin{table}[H]
+\centering
+\begin{tabular}{rrrrrrrrrrrrrrr}
+\hline
+Model & ANOVA & $\Delta$AIC & $R^2$ \\
+\hline
+Top model & NA & 0 & \Sexpr{round(Rsq_FC[1],4)}  \\
+FC model & \Sexpr{round(ANOVA_FC$`Pr(>Chisq)`[2],4)} & \Sexpr{round(diff(AIC_FC),4)}  & \Sexpr{round(Rsq_FC[2],4)} \\
+FW model & \Sexpr{round(ANOVA_FW$`Pr(>Chisq)`[2],4)} & \Sexpr{round(diff(AIC_FW),4)}  & \Sexpr{round(Rsq_FW[2],4)} \\
+FM model & \Sexpr{round(ANOVA_FM$`Pr(>Chisq)`[2],4)} & \Sexpr{round(diff(AIC_FM),4)} & \Sexpr{round(Rsq_FM[2],4)} \\
+\hline
+\end{tabular}
+\caption{Results from the models of section \ref{sect:CornFallow} examining the question of whether it's better to 
+let a field be fallow in the year before planting corn, or to plant corn, wheat, or milo. The model names are
+defined in the text. The ANOVA column describes the p-value result of a statistical comparison between the given
+model and the top model. The $\Delta$AIC result is the AIC of the model in the row, minus the AIC of the top model.
+So negative values here mean an improvement over the top model and positive values mean no improvement. But recall
+that AIC differences less than $2$ or so are not considered meaningful.
+The $R^2$ column is the coefficient of determination of the model, including the random effects for year.
+These are all quite similar, but that does not mean there are no meaningful differences between the models,
+as discussed in the text.}\label{tab:FCresults}
+\end{table}
+
+\section{Kastens versus Volgamore corn yields}\label{sect:VvsK}
+
+
+\section{Effects of recent history}\label{sect:RecentHistory}
+
+
+\section{Random effects of field}\label{sect:RandomFieldEffects}
+
+\section{Where we might go next}\label{sect:WhereNext}
+
+
+
+\end{document}
